@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syamflasher Nota</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#edf1f7;font-family:Arial,sans-serif;color:#17233b}
+header{background:#102b55;color:white;text-align:center;padding:22px}
+header h2{margin:0;color:#ff9b24}
+header p{margin:7px 0 0;font-size:13px}
+main{max-width:600px;margin:auto;padding:14px}
+.card{background:white;padding:16px;border-radius:13px;margin-bottom:14px;box-shadow:0 3px 12px #0001}
+h3{margin:0 0 14px;color:#123568}
+label{display:block;font-size:13px;font-weight:bold;margin:12px 0 5px}
+input,textarea{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:8px;font-size:15px}
+textarea{min-height:65px}
+button{border:0;border-radius:9px;padding:14px;font-weight:bold;font-size:14px;cursor:pointer}
+.primary{background:#123568;color:white;width:100%;margin-top:14px}
+.wa{background:#159b58;color:white;width:100%;margin-top:9px}
+.orange{background:#ff9b24;color:#17233b;width:100%;margin-top:9px}
+.total{background:#102b55;color:white;padding:16px;border-radius:10px;margin-top:14px}
+.total strong{font-size:23px;color:#ffb34d}
+.item{border-bottom:1px solid #eee;padding:12px 0;font-size:13px}
+small{color:#68758a}
+</style>
+</head>
+<body>
+<header>
+<h2>SMF | SYAMFLASHER</h2>
+<p>NOTA SERVICE HANDPHONE</p>
+<p>085320690367</p>
+</header>
+
+<main>
+<div class="card">
+<h3>Data Konsumen</h3>
+<label>Nama Konsumen</label>
+<input id="nama" placeholder="Nama konsumen">
+
+<label>Nomor WhatsApp</label>
+<input id="wa" type="tel" placeholder="Contoh: 628123456789">
+
+<label>Merek dan Tipe HP</label>
+<input id="hp" placeholder="Contoh: Oppo A16">
+
+<label>Kerusakan</label>
+<textarea id="rusak" placeholder="Jelaskan kerusakan HP"></textarea>
+</div>
+
+<div class="card">
+<h3>Rincian Biaya</h3>
+<label>Biaya Jasa (Rp)</label>
+<input id="jasa" type="number" value="0" oninput="hitung()">
+
+<label>Biaya Sparepart (Rp)</label>
+<input id="part" type="number" value="0" oninput="hitung()">
+
+<label>Catatan Tambahan</label>
+<textarea id="catatan" placeholder="Catatan pengerjaan (opsional)"></textarea>
+
+<div class="total">
+Total Biaya<br>
+<strong id="total">Rp0</strong>
+</div>
+
+<button class="primary" onclick="buatNota()">BUAT NOTA</button>
+<button class="wa" onclick="kirimWA()">KIRIM NOTA VIA WHATSAPP</button>
+</div>
+
+<div class="card" id="hasil" style="display:none">
+<h3>Pratinjau Nota</h3>
+<div id="isiNota"></div>
+</div>
+
+<div class="card">
+<h3>Riwayat Nota</h3>
+<div id="riwayat"><small>Belum ada riwayat nota.</small></div>
+<button class="orange" onclick="hapusRiwayat()">HAPUS RIWAYAT</button>
+</div>
+</main>
+
+<script>
+let notaTerkini = "";
+let nomorTujuan = "";
+
+function rupiah(n){
+ return new Intl.NumberFormat("id-ID",{
+  style:"currency",
+  currency:"IDR",
+  maximumFractionDigits:0
+ }).format(Number(n)||0);
+}
+
+function hitung(){
+ const total =
+  (Number(document.getElementById("jasa").value)||0) +
+  (Number(document.getElementById("part").value)||0);
+
+ document.getElementById("total").textContent=rupiah(total);
+ return total;
+}
+
+function buatNota(){
+ const nama=document.getElementById("nama").value.trim();
+ nomorTujuan=document.getElementById("wa").value.trim();
+ const hp=document.getElementById("hp").value.trim();
+ const rusak=document.getElementById("rusak").value.trim();
+ const jasa=Number(document.getElementById("jasa").value)||0;
+ const part=Number(document.getElementById("part").value)||0;
+ const catatan=document.getElementById("catatan").value.trim();
+
+ if(!nama||!nomorTujuan||!hp||!rusak){
+  alert("Lengkapi data konsumen terlebih dahulu.");
+  return;
+ }
+
+ let nomor=nomorTujuan.replace(/\D/g,"");
+ if(nomor.startsWith("0")) nomor="62"+nomor.slice(1);
+ if(nomor.startsWith("8")) nomor="62"+nomor;
+
+ const tanggal=new Date().toLocaleString("id-ID");
+ const total=jasa+part;
+
+ notaTerkini=
+`*SYAMFLASHER*
+NOTA SERVICE HANDPHONE
+-------------------------
+Tanggal: ${tanggal}
+Nama: ${nama}
+No. WhatsApp: ${nomorTujuan}
+HP: ${hp}
+Kerusakan: ${rusak}
+
+Biaya jasa: ${rupiah(jasa)}
+Biaya sparepart: ${rupiah(part)}
+*TOTAL: ${rupiah(total)}*
+
+Catatan: ${catatan||"-"}
+
+Garansi service 14 hari sesuai ketentuan garansi.
+
+Terima kasih telah mempercayakan service HP Anda kepada Syamflasher.`;
+
+ document.getElementById("isiNota").innerText=notaTerkini;
+ document.getElementById("hasil").style.display="block";
+
+ let data=JSON.parse(localStorage.getItem("riwayatSyam")||"[]");
+ data.unshift({tanggal,nama,hp,total,nota:notaTerkini});
+ localStorage.setItem("riwayatSyam",JSON.stringify(data.slice(0,50)));
+ tampilRiwayat();
+}
+
+function kirimWA(){
+ if(!notaTerkini){
+  alert("Buat nota terlebih dahulu.");
+  return;
+ }
+ let nomor=nomorTujuan.replace(/\D/g,"");
+ if(nomor.startsWith("0")) nomor="62"+nomor.slice(1);
+ if(nomor.startsWith("8")) nomor="62"+nomor;
+
+ window.open(
+  "https://wa.me/"+nomor+"?text="+encodeURIComponent(notaTerkini),
+  "_blank"
+ );
+}
+
+function tampilRiwayat(){
+ const data=JSON.parse(localStorage.getItem("riwayatSyam")||"[]");
+ const tempat=document.getElementById("riwayat");
+
+ if(!data.length){
+  tempat.innerHTML="<small>Belum ada riwayat nota.</small>";
+  return;
+ }
+
+ tempat.innerHTML=data.map((x,i)=>`
+  <div class="item">
+   <b>${x.nama}</b><br>
+   ${x.hp}<br>
+   ${x.tanggal}<br>
+   <b>${rupiah(x.total)}</b><br>
+   <button class="orange" onclick="ulangKirim(${i})">KIRIM ULANG</button>
+  </div>
+ `).join("");
+}
+
+function ulangKirim(i){
+ const data=JSON.parse(localStorage.getItem("riwayatSyam")||"[]");
+ notaTerkini=data[i].nota;
+ document.getElementById("isiNota").innerText=notaTerkini;
+ document.getElementById("hasil").style.display="block";
+ alert("Nota siap dikirim. Masukkan nomor WhatsApp jika diperlukan.");
+}
+
+function hapusRiwayat(){
+ if(confirm("Hapus semua riwayat nota?")){
+  localStorage.removeItem("riwayatSyam");
+  tampilRiwayat();
+ }
+}
+
+tampilRiwayat();
+</script>
+</body>
+</html>
